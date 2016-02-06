@@ -1,3 +1,4 @@
+package server;
 import java.io.*;
 import java.net.*;
 
@@ -7,7 +8,7 @@ public class ServerMain {
 	private static MatchingManager  mm;
 	
 	/**
-	 * args[0]番ポート で接続待ちして、接続があったらGameManagerにsocketを投げる
+	 * args[0]番ポート で接続待ちして、接続があったらMatchingManagerにsocketを投げる
 	 * 引数なしのデフォルトは2424
 	 */
 	public static void main(String[] args) throws IOException {

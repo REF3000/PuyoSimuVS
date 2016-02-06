@@ -89,6 +89,8 @@ class Connection extends Thread {
 	 * 受信したデータを処理する
 	 */
 	void process(){
+		// WAITINGはhead部の処理
+		// それ以外はbody部の処理
 		switch( m_status ){
 		case WAITING:
 			doWaiting();
@@ -98,6 +100,7 @@ class Connection extends Thread {
 			break;
 		case DEBUG:
 			doDebug();
+			break;
 		default:
 			resetStatus();
 			break;
@@ -106,13 +109,17 @@ class Connection extends Thread {
 	}
 
 	void doWaiting(){
+		// head部の処理
+		// body部があればbreak 無ければreturn
 		switch( m_buffer[0] ){
 		case 1:
 			m_status = eStatus.SET_NAME;
 			break;
+		case 2:
+			doJoinRandom();
+			return;
 		case 9:
 			doDebug();
-			resetStatus();
 			return;
 		case 10:
 			m_status = eStatus.DEBUG;
@@ -130,6 +137,14 @@ class Connection extends Thread {
 		System.arraycopy(m_buffer, 0, m_name, 0, m_data_size);		
 		resetStatus();
 	}
+	void doJoinRandom(){
+		resetStatus();
+	}
+	
+	
+	
+	
+	
 	void doDebug(){
 		System.out.print("debug:");
 		for( int i=0; i<m_name.length; ++i ){
@@ -139,16 +154,27 @@ class Connection extends Thread {
 		resetStatus();
 	}
 }
-
+/**
+ * マッチング状態を監督するクラス
+ *
+ */
+class MatchingDirector extends Thread {
+	
+	public void run(){
+		
+	}
+}
 
 public class MatchingManager {
 
 	public MatchingManager(){
+		MatchingDirector obj = new MatchingDirector();
+		obj.start();
 	}
 
 	/**
 	 * 新しい接続を追加する。
-	 * 接続はその後MatchingProtocolに則って通信を行う。
+	 * 接続はその後Protocolに則って通信を行う。
 	 * @param socket
 	 * @throws IOException 
 	 */

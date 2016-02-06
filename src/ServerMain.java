@@ -11,7 +11,7 @@ public class ServerMain {
 	 * 引数なしのデフォルトは2424
 	 */
 	public static void main(String[] args) throws IOException {
-		int port = 2427;
+		int port = 2424;
 		if( args.length>0 ) port = Integer.parseInt(args[0]); 
 		
 		server = new ServerSocket(port);

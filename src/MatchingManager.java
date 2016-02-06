@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.util.LinkedList;
 
 /**
  * Protocolに則り通信を行うクラス
@@ -22,18 +23,24 @@ class Connection extends Thread {
 	int         m_data_size;  // 読み取った/読み取るデータサイズ
 	eStatus     m_status;
 
-	byte[]      m_name;
+	byte[]      m_name = new byte[0];
 
-	public Connection( Socket socket ) throws IOException{
+	GameManager     m_game_manager = null;
+	MatchingManager m_matching_manager;
+
+	public Connection( Socket socket, MatchingManager mm ) throws IOException{
 		m_socket = socket;
 		m_in     = m_socket.getInputStream();
 		m_buffer = new byte[BUFFER_SIZE];
 		resetStatus();
-		m_name   = new byte[0];
+		m_matching_manager = mm;
 	}
 	void resetStatus(){
 		m_data_size = HEADER_SIZE;
 		m_status = eStatus.WAITING;
+	}
+	public void setGameManager( GameManager gm ){
+		m_game_manager = gm;
 	}
 
 	public void run(){
@@ -138,13 +145,14 @@ class Connection extends Thread {
 		resetStatus();
 	}
 	void doJoinRandom(){
+		m_matching_manager.addConnectionRandom(this);
 		resetStatus();
 	}
-	
-	
-	
-	
-	
+
+
+
+
+
 	void doDebug(){
 		System.out.print("debug:");
 		for( int i=0; i<m_name.length; ++i ){
@@ -154,24 +162,41 @@ class Connection extends Thread {
 		resetStatus();
 	}
 }
+
 /**
- * マッチング状態を監督するクラス
- *
+ * ゲームを管理するクラス
  */
-class MatchingDirector extends Thread {
+class GameManager extends Thread {
 	
+	Game m_game;
+	
+	GameManager( Connection con1, Connection con2 ){
+		con1.setGameManager( this );
+		con2.setGameManager( this );
+	}
+
 	public void run(){
-		
+		try {
+			while(true){
+				Thread.sleep(100);
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 }
 
-public class MatchingManager {
+/**
+ * マッチングを管理するクラス
+ */
+public class MatchingManager extends Thread {
 
+	LinkedList<Connection> m_random_connection;
+	
 	public MatchingManager(){
-		MatchingDirector obj = new MatchingDirector();
-		obj.start();
+		m_random_connection = new LinkedList<Connection>();
 	}
-
+	
 	/**
 	 * 新しい接続を追加する。
 	 * 接続はその後Protocolに則って通信を行う。
@@ -180,8 +205,38 @@ public class MatchingManager {
 	 */
 	public void addSocket( Socket socket ) throws IOException{
 		System.out.println( "Connect:"+socket );
-		Connection con = new Connection( socket );
+		Connection con = new Connection( socket, this );
 		con.start();
 	}
 
+	/**
+	 * random_connectionに２つ以上登録されていれば
+	 * マッチングしてゲームを開始する。
+	 */
+	public void run(){
+		try {
+			while(true){
+				Thread.sleep(100);
+				if( m_random_connection.size() >= 2 ){
+					Connection con1 = m_random_connection.poll();
+					Connection con2 = m_random_connection.poll();
+					// TODO:ここで接続が生きてるか確認したほうがいいかも？
+					System.out.println("Matching成立");
+					GameManager gm = new GameManager( con1, con2 );
+					gm.start();
+				}
+			}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * randomに名乗りをあげる
+	 * @param con
+	 */
+	public void addConnectionRandom( Connection con ){
+		m_random_connection.add(con);
+	}
+	
 }

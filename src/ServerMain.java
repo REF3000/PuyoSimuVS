@@ -4,7 +4,7 @@ import java.net.*;
 public class ServerMain {
 
 	private static ServerSocket server;
-	private static MatchingManager  gm;
+	private static MatchingManager  mm;
 	
 	/**
 	 * args[0]番ポート で接続待ちして、接続があったらGameManagerにsocketを投げる
@@ -15,10 +15,11 @@ public class ServerMain {
 		if( args.length>0 ) port = Integer.parseInt(args[0]); 
 		
 		server = new ServerSocket(port);
-		gm     = new MatchingManager();
+		mm     = new MatchingManager();
+		mm.start();
 		while(true){ // TODO:ここ無限ループだけど、実装これで本当にいいのか確認する。
 			Socket socket = server.accept();
-			gm.addSocket( socket );
+			mm.addSocket( socket );
 		}		
 	}
 	

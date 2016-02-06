@@ -17,16 +17,17 @@ class Connection extends Thread {
 		DEBUG,
 	}
 
-	Socket      m_socket;     // 
-	InputStream m_in;         // 
-	byte[]      m_buffer;     // 読み取ったデータ用バッファ
-	int         m_data_size;  // 読み取った/読み取るデータサイズ
-	eStatus     m_status;
+	private Socket      m_socket;     // 
+	private InputStream m_in;         // 
+	private byte[]      m_buffer;     // 読み取ったデータ用バッファ
+	private int         m_data_size;  // 読み取った/読み取るデータサイズ
+	private eStatus     m_status;
 
-	byte[]      m_name = new byte[0];
+	private String      m_name = "NO_NAME";
 
-	GameManager     m_game_manager = null;
-	MatchingManager m_matching_manager;
+	private GameManager     m_game_manager = null;
+	private MatchingManager m_matching_manager;
+	private int m_id;
 
 	public Connection( Socket socket, MatchingManager mm ) throws IOException{
 		m_socket = socket;
@@ -39,8 +40,9 @@ class Connection extends Thread {
 		m_data_size = HEADER_SIZE;
 		m_status = eStatus.WAITING;
 	}
-	public void setGameManager( GameManager gm ){
+	public void setGameManager( GameManager gm, int id ){
 		m_game_manager = gm;
+		m_id = id;
 	}
 
 	public void run(){
@@ -140,25 +142,21 @@ class Connection extends Thread {
 	}
 	void doSetName(){
 		System.out.println("SetName");
-		m_name = new byte[m_data_size];
-		System.arraycopy(m_buffer, 0, m_name, 0, m_data_size);		
+		m_name = new String( m_buffer, 0, m_data_size );
 		resetStatus();
+	}
+	public String getPlayerName(){
+		return m_name;
 	}
 	void doJoinRandom(){
 		m_matching_manager.addConnectionRandom(this);
 		resetStatus();
 	}
 
-
-
-
-
 	void doDebug(){
 		System.out.print("debug:");
-		for( int i=0; i<m_name.length; ++i ){
-			System.out.printf("%02X ",m_name[i]);
-		}
-		System.out.println();
+		//System.out.println(m_name);
+		System.out.println( m_game_manager.getEnemyName(m_id) );
 		resetStatus();
 	}
 }
@@ -171,8 +169,11 @@ class GameManager extends Thread {
 	Game m_game;
 	
 	GameManager( Connection con1, Connection con2 ){
-		con1.setGameManager( this );
-		con2.setGameManager( this );
+		con1.setGameManager( this, 1 );
+		con2.setGameManager( this, 2 );
+		m_game = new Game();
+		m_game.p1_name = con1.getPlayerName();
+		m_game.p2_name = con2.getPlayerName();
 	}
 
 	public void run(){
@@ -183,6 +184,11 @@ class GameManager extends Thread {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+	}
+	
+	public String getEnemyName( int id ){
+		if( id==1 ) return m_game.p2_name;
+		return m_game.p1_name;
 	}
 }
 

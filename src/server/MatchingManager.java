@@ -128,6 +128,9 @@ class Connection extends Thread {
 		case 2:
 			doJoinRandom();
 			return;
+		case 3:
+			doSetReady();
+			return;
 		case 9:
 			doDebug();
 			return;
@@ -153,6 +156,11 @@ class Connection extends Thread {
 		m_matching_manager.addConnectionRandom(this);
 		resetStatus();
 	}
+	void doSetReady(){
+		if( m_game_manager==null ) return;
+		m_game_manager.setReady(m_id);
+		resetStatus();
+	}
 
 	void doDebug(){
 		System.out.print("debug:");
@@ -172,9 +180,7 @@ class GameManager extends Thread {
 	GameManager( Connection con1, Connection con2 ){
 		con1.setGameManager( this, 1 );
 		con2.setGameManager( this, 2 );
-		m_game = new Game();
-		m_game.p1_name = con1.getPlayerName();
-		m_game.p2_name = con2.getPlayerName();
+		m_game = new Game( con1.getPlayerName(), con2.getPlayerName() );
 	}
 
 	public void run(){
@@ -188,8 +194,11 @@ class GameManager extends Thread {
 	}
 	
 	public String getEnemyName( int id ){
-		if( id==1 ) return m_game.p2_name;
-		return m_game.p1_name;
+		if( id==1 ) return m_game.getName(2);
+		return m_game.getName(1);
+	}
+	public void setReady( int id ){
+		m_game.setReady( id, true );
 	}
 }
 

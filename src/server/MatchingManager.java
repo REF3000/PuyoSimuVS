@@ -168,6 +168,18 @@ class Connection extends Thread {
 		System.out.println( m_game_manager.getEnemyName(m_id) );
 		resetStatus();
 	}
+	
+	void send( byte[] data ) throws IOException{
+		OutputStream out = m_socket.getOutputStream();
+		out.write( data );
+		out.flush();
+	}
+	public void sendMatchingNotice() throws IOException{
+		byte[] buf = new byte[2];
+		buf[0] = 0x01;
+		buf[1] = 0x02;
+		send( buf );
+	}
 }
 
 /**
@@ -177,10 +189,12 @@ class GameManager extends Thread {
 	
 	Game m_game;
 	
-	GameManager( Connection con1, Connection con2 ){
+	GameManager( Connection con1, Connection con2 ) throws IOException{
 		con1.setGameManager( this, 1 );
 		con2.setGameManager( this, 2 );
 		m_game = new Game( con1.getPlayerName(), con2.getPlayerName() );
+		con1.sendMatchingNotice();
+		con2.sendMatchingNotice();
 	}
 
 	public void run(){
@@ -243,6 +257,8 @@ public class MatchingManager extends Thread {
 				}
 			}
 		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}

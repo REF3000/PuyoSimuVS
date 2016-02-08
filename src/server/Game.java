@@ -3,6 +3,7 @@ package server;
 /**
  * ゲーム情報を管理してるクラス
  * いろいろガバガバ
+ * TODO: 範囲外とかの対応
  */
 public class Game {
 	
@@ -11,7 +12,6 @@ public class Game {
 	
 	class Field{
 		public int field[] = new int[H*W];
-		// TODO:範囲外の対応
 		void set( int x, int y , int puyo ){
 			field[ y*W + x ] = puyo;
 		}

@@ -46,6 +46,19 @@ public class ClientMain {
 				buf[1] = 0x00;
 				send( buf, 2 );
 				break;
+			case "a":
+			case "action":
+				System.out.print("action:");
+				int id  = Integer.parseInt(scan.next());
+				int pos = Integer.parseInt(scan.next());
+				int dir = Integer.parseInt(scan.next());
+				buf[0] = 0x04;
+				buf[1] = 0x03;
+				buf[2] = (byte)id;
+				buf[3] = (byte)pos;
+				buf[4] = (byte)dir;
+				send( buf, 5 );
+				break;
 			case "d":
 			case "debug":
 				buf[0] = 0x09;

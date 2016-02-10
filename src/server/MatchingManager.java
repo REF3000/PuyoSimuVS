@@ -3,6 +3,8 @@ import java.io.*;
 import java.net.*;
 import java.util.LinkedList;
 
+import server.Game.Action;
+
 /**
  * Protocolに則り通信を行うクラス
  * スレッドで動作する
@@ -15,6 +17,7 @@ class Connection extends Thread {
 	enum eStatus{
 		WAITING,
 		SET_NAME,
+		SET_ACTION,
 		DEBUG,
 	}
 
@@ -108,6 +111,9 @@ class Connection extends Thread {
 		case SET_NAME:
 			doSetName();
 			break;
+		case SET_ACTION:
+			doSetAction();
+			break;
 		case DEBUG:
 			doDebug();
 			break;
@@ -131,6 +137,9 @@ class Connection extends Thread {
 		case 3:
 			doSetReady();
 			return;
+		case 4:
+			m_status = eStatus.SET_ACTION;
+			break;
 		case 9:
 			doDebug();
 			return;
@@ -159,6 +168,13 @@ class Connection extends Thread {
 	void doSetReady(){
 		if( m_game_manager==null ) return;
 		m_game_manager.setReady(m_id);
+		resetStatus();
+	}
+	void doSetAction(){
+		int id  = m_buffer[0];
+		int pos = m_buffer[1];
+		int dir = m_buffer[2];
+		m_game_manager.setAction(m_id,id,pos,dir);
 		resetStatus();
 	}
 
@@ -227,6 +243,10 @@ class GameManager extends Thread {
 	}
 	public void setReady( int id ){
 		m_game.setReady( id, true );
+	}
+	public void setAction( int id, int act_id, int pos, int dir ){
+		Action act = m_game.new Action( act_id, pos, dir );
+		m_game.setAction( id, act );
 	}
 }
 

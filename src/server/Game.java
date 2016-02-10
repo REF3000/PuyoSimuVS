@@ -11,7 +11,10 @@ public class Game {
 	static final int W = 6;
 	
 	class Field{
-		public int field[] = new int[H*W];
+		public int field[];
+		Field(){
+			field = new int[H*W];
+		}
 		void set( int x, int y , int puyo ){
 			field[ y*W + x ] = puyo;
 		}
@@ -23,9 +26,15 @@ public class Game {
 		}
 	}
 	class Action{
-		public int id  = 0; // 1:設置 2:パス（未実装） 3:サレンダー（未実装）
-		public int pos = 0;
-		public int dir = 0;
+		public int id; // 1:設置 2:パス（未実装） 3:サレンダー（未実装）
+		public int pos;
+		public int dir;
+		Action(){
+			id = 0; pos = 0; dir = 0;
+		}
+		Action( int id, int pos, int dir ){
+			this.id = id; this.pos = pos; this.dir = dir;
+		}
 	}
 	
 	private String  name[]    = new String[2];	
@@ -66,10 +75,12 @@ public class Game {
 		return action[id-1];
 	}
 	synchronized public void setAction( int id, Action act ){
+		System.out.printf("setAction(%d,%d,%d)\n",act.id,act.pos,act.dir);
 		action[id-1] = act;
 	}	
 	
 	public void next(){
+		System.out.println("Game.next()");
 		ready[0] = false;
 		ready[1] = false;
 	}

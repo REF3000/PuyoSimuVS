@@ -23,9 +23,9 @@ public class Game {
 		}
 	}
 	class Action{
-		public int id; // 1:設置 2:パス（未実装） 3:サレンダー（未実装）
-		public int pos;
-		public int dir;
+		public int id  = 0; // 1:設置 2:パス（未実装） 3:サレンダー（未実装）
+		public int pos = 0;
+		public int dir = 0;
 	}
 	
 	private String  name[]    = new String[2];	
@@ -37,6 +37,10 @@ public class Game {
 	Game( String p1, String p2 ){
 		name[0] = p1;
 		name[1] = p2;
+		field[0] = new Field();
+		field[1] = new Field();
+		action[0] = new Action();
+		action[1] = new Action();
 		init();
 	}
 	void init(){
@@ -49,7 +53,7 @@ public class Game {
 	public String getName( int id ){
 		return name[id-1];
 	}
-	public void setReady( int id, boolean b ){
+	synchronized public void setReady( int id, boolean b ){
 		ready[id-1] = b;
 	}
 	public boolean getReady( int id ){
@@ -61,5 +65,12 @@ public class Game {
 	public Action getAction( int id ){
 		return action[id-1];
 	}
+	synchronized public void setAction( int id, Action act ){
+		action[id-1] = act;
+	}	
 	
+	public void next(){
+		ready[0] = false;
+		ready[1] = false;
+	}
 }

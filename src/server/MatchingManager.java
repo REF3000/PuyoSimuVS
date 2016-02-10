@@ -180,6 +180,12 @@ class Connection extends Thread {
 		buf[1] = 0x02;
 		send( buf );
 	}
+	public void sendStartTurn() throws IOException{
+		byte[] buf = new byte[2];
+		buf[0] = 0x02;
+		buf[1] = 0x03;
+		send( buf );
+	}
 }
 
 /**
@@ -188,8 +194,11 @@ class Connection extends Thread {
 class GameManager extends Thread {
 	
 	Game m_game;
+	Connection m_p1, m_p2;
 	
 	GameManager( Connection con1, Connection con2 ) throws IOException{
+		m_p1 = con1;
+		m_p2 = con2;
 		con1.setGameManager( this, 1 );
 		con2.setGameManager( this, 2 );
 		m_game = new Game( con1.getPlayerName(), con2.getPlayerName() );
@@ -200,9 +209,14 @@ class GameManager extends Thread {
 	public void run(){
 		try {
 			while(true){
+				if( m_game.getReady(1) && m_game.getReady(2) ){
+					m_p1.sendStartTurn();
+					m_p2.sendStartTurn();
+					m_game.next();
+				}
 				Thread.sleep(100);
 			}
-		} catch (InterruptedException e) {
+		} catch (InterruptedException | IOException e) {
 			e.printStackTrace();
 		}
 	}

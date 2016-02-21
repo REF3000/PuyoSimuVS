@@ -1,5 +1,54 @@
 package server;
 
+class Tumo{
+	public int first;
+	public int second;
+}
+class Next{
+	Tumo[] table = new Tumo[128];
+	Next(){
+		for( int i=0; i<128; ++i ) table[i] = new Tumo();
+		init();
+	}
+	void init(){
+		for(int i=0; i<128; ++i){
+			table[i].first  = (int)(Math.random()*4)+1;
+			table[i].second = (int)(Math.random()*4)+1;
+		}
+	}
+	Tumo get( int num ){
+		return table[num%128];
+	}
+}
+class Field{
+	static final int H = 13;
+	static final int W = 6;
+	public int field[];
+	Field(){
+		field = new int[H*W];
+	}
+	void set( int x, int y , int puyo ){
+		field[ y*W + x ] = puyo;
+	}
+	int get( int x, int y ){
+		return field[ y*W + x ];
+	}
+	void init(){
+		for(int i=0; i<H*W; ++i ) field[i] = 0;
+	}
+}
+class Action{
+	public int id; // 1:設置 2:パス（未実装） 3:サレンダー（未実装）
+	public int pos;
+	public int dir;
+	Action(){
+		id = 0; pos = 0; dir = 0;
+	}
+	Action( int id, int pos, int dir ){
+		this.id = id; this.pos = pos; this.dir = dir;
+	}
+}
+
 /**
  * ゲーム情報を管理してるクラス
  * いろいろガバガバ
@@ -7,41 +56,12 @@ package server;
  */
 public class Game {
 	
-	static final int H = 13;
-	static final int W = 6;
-	
-	class Field{
-		public int field[];
-		Field(){
-			field = new int[H*W];
-		}
-		void set( int x, int y , int puyo ){
-			field[ y*W + x ] = puyo;
-		}
-		int get( int x, int y ){
-			return field[ y*W + x ];
-		}
-		void init(){
-			for(int i=0; i<H*W; ++i ) field[i] = 0;
-		}
-	}
-	class Action{
-		public int id; // 1:設置 2:パス（未実装） 3:サレンダー（未実装）
-		public int pos;
-		public int dir;
-		Action(){
-			id = 0; pos = 0; dir = 0;
-		}
-		Action( int id, int pos, int dir ){
-			this.id = id; this.pos = pos; this.dir = dir;
-		}
-	}
-	
 	private String  name[]    = new String[2];	
 	private Field   field[]   = new Field[2];
 	private Action  action[]  = new Action[2];
 	private boolean ready[]   = new boolean[2];
 	
+	private Next next = new Next();
 	
 	Game( String p1, String p2 ){
 		name[0] = p1;
@@ -58,6 +78,7 @@ public class Game {
 			action[i].id = 0;
 			ready[i] = false;
 		}
+		next.init();
 	}
 	public String getName( int id ){
 		return name[id-1];
@@ -77,10 +98,14 @@ public class Game {
 	synchronized public void setAction( int id, Action act ){
 		System.out.printf("setAction(%d,%d,%d)\n",act.id,act.pos,act.dir);
 		action[id-1] = act;
-	}	
+	}
+	public Next getNext(){
+		return next;
+	}
 	
 	public void next(){
 		System.out.println("Game.next()");
+		
 		ready[0] = false;
 		ready[1] = false;
 	}

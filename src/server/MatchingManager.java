@@ -3,8 +3,6 @@ import java.io.*;
 import java.net.*;
 import java.util.LinkedList;
 
-import server.Game.Action;
-
 /**
  * Protocolに則り通信を行うクラス
  * スレッドで動作する
@@ -12,7 +10,7 @@ import server.Game.Action;
 class Connection extends Thread {
 	static final int BUFFER_SIZE = 256;
 	static final int HEADER_SIZE = 2;
-	static final int KEEP_ALIVE_MS = 10*60*1000;
+	static final int KEEP_ALIVE_MS = 5*60*1000;
 
 	enum eStatus{
 		WAITING,
@@ -99,9 +97,9 @@ class Connection extends Thread {
 	}
 
 	/**
-	 * 受信したデータを処理する
+	 * 受信したデータを処理する 
 	 */
-	void process(){
+	void process() throws IOException{
 		// WAITINGはhead部の処理
 		// それ以外はbody部の処理
 		switch( m_status ){
@@ -140,6 +138,9 @@ class Connection extends Thread {
 		case 4:
 			m_status = eStatus.SET_ACTION;
 			break;
+		case 6:
+			doFinish();
+			return;
 		case 9:
 			doDebug();
 			return;
@@ -170,11 +171,16 @@ class Connection extends Thread {
 		m_game_manager.setReady(m_id);
 		resetStatus();
 	}
-	void doSetAction(){
+	void doSetAction() throws IOException{
 		int id  = m_buffer[0];
 		int pos = m_buffer[1];
 		int dir = m_buffer[2];
 		m_game_manager.setAction(m_id,id,pos,dir);
+		resetStatus();
+	}
+	void doFinish(){
+		System.out.println("doFinish");
+		//m_game_manager.closeConnection(m_id);
 		resetStatus();
 	}
 
@@ -184,7 +190,7 @@ class Connection extends Thread {
 		System.out.println( m_game_manager.getEnemyName(m_id) );
 		resetStatus();
 	}
-	
+
 	void send( byte[] data ) throws IOException{
 		OutputStream out = m_socket.getOutputStream();
 		out.write( data );
@@ -193,25 +199,53 @@ class Connection extends Thread {
 	public void sendMatchingNotice() throws IOException{
 		byte[] buf = new byte[2];
 		buf[0] = 0x01;
-		buf[1] = 0x02;
+		buf[1] = 0x00;
+		send( buf );
+	}
+	public void sendEnemyName( String name ) throws IOException{
+		byte[] nameb = name.getBytes();
+		byte[] buf = new byte[2];
+		buf[0] = 0x02;
+		buf[1] = (byte)nameb.length;
+		send( buf );
+		send( nameb );
+	}
+	public void sendNextTable( Next next ) throws IOException{
+		byte[] buf = new byte[256+2];
+		buf[0] = 0x03;
+		buf[1] = 0x03;
+		for( int i=0; i<128; ++i ){
+			buf[2+i*2  ] = (byte)next.get(i).first;
+			buf[2+i*2+1] = (byte)next.get(i).second;
+		}
 		send( buf );
 	}
 	public void sendStartTurn() throws IOException{
 		byte[] buf = new byte[2];
-		buf[0] = 0x02;
-		buf[1] = 0x03;
+		buf[0] = 0x04;
+		buf[1] = 0x00;
 		send( buf );
 	}
+	public void sendEnemyAction( Action act ) throws IOException{
+		byte[] buf = new byte[5];
+		buf[0] = 0x05;
+		buf[1] = 0x03;
+		buf[2] = (byte)act.id;
+		buf[3] = (byte)act.pos;
+		buf[4] = (byte)act.dir;
+		send( buf );	
+	}
+
 }
 
 /**
  * ゲームを管理するクラス
  */
 class GameManager extends Thread {
-	
+
 	Game m_game;
 	Connection m_p1, m_p2;
-	
+
 	GameManager( Connection con1, Connection con2 ) throws IOException{
 		m_p1 = con1;
 		m_p2 = con2;
@@ -220,15 +254,19 @@ class GameManager extends Thread {
 		m_game = new Game( con1.getPlayerName(), con2.getPlayerName() );
 		con1.sendMatchingNotice();
 		con2.sendMatchingNotice();
+		con1.sendEnemyName( m_game.getName(2) );
+		con2.sendEnemyName( m_game.getName(1) );
+		con1.sendNextTable( m_game.getNext() );
+		con2.sendNextTable( m_game.getNext() );
 	}
 
 	public void run(){
 		try {
 			while(true){
 				if( m_game.getReady(1) && m_game.getReady(2) ){
+					m_game.next();
 					m_p1.sendStartTurn();
 					m_p2.sendStartTurn();
-					m_game.next();
 				}
 				Thread.sleep(100);
 			}
@@ -236,7 +274,7 @@ class GameManager extends Thread {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public String getEnemyName( int id ){
 		if( id==1 ) return m_game.getName(2);
 		return m_game.getName(1);
@@ -244,9 +282,16 @@ class GameManager extends Thread {
 	public void setReady( int id ){
 		m_game.setReady( id, true );
 	}
-	public void setAction( int id, int act_id, int pos, int dir ){
-		Action act = m_game.new Action( act_id, pos, dir );
+	public void setAction( int id, int act_id, int pos, int dir ) throws IOException{
+		Action act = new Action( act_id, pos, dir );
 		m_game.setAction( id, act );
+		if(id==1)
+			m_p2.sendEnemyAction( m_game.getAction(1) );
+		else
+			m_p1.sendEnemyAction( m_game.getAction(2) );
+	}
+	public void closeConnection( int id ){
+		System.out.println("closeConnection:"+id);
 	}
 }
 
@@ -256,11 +301,11 @@ class GameManager extends Thread {
 public class MatchingManager extends Thread {
 
 	LinkedList<Connection> m_random_connection;
-	
+
 	public MatchingManager(){
 		m_random_connection = new LinkedList<Connection>();
 	}
-	
+
 	/**
 	 * 新しい接続を追加する。
 	 * 接続はその後Protocolに則って通信を行う。
@@ -296,7 +341,7 @@ public class MatchingManager extends Thread {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
 	 * randomに名乗りをあげる
 	 * @param con
@@ -304,5 +349,5 @@ public class MatchingManager extends Thread {
 	public void addConnectionRandom( Connection con ){
 		m_random_connection.add(con);
 	}
-	
+
 }

@@ -119,7 +119,7 @@ class Connection extends Thread {
 			resetStatus();
 			break;
 		}
-		System.out.println(">process end.");
+		//System.out.println(">process end.");
 	}
 
 	void doWaiting(){
@@ -220,6 +220,14 @@ class Connection extends Thread {
 		}
 		send( buf );
 	}
+	public void sendOjamaTable( int[] ojama ) throws IOException{
+		byte[] buf = new byte[6+2];
+		buf[0] = 0x07;
+		buf[1] = 0x08;
+		for( int i=0; i<6; ++i )
+			buf[2+i] = (byte)ojama[i];
+		send( buf );
+	}
 	public void sendStartTurn() throws IOException{
 		byte[] buf = new byte[2];
 		buf[0] = 0x04;
@@ -235,7 +243,13 @@ class Connection extends Thread {
 		buf[4] = (byte)act.dir;
 		send( buf );	
 	}
-
+	public void sendFinishInfo( int status ) throws IOException{
+		byte[] buf = new byte[3];
+		buf[0] = 0x06;
+		buf[1] = 0x01;
+		buf[2] = (byte)status;
+		send( buf );	
+	}
 }
 
 /**
@@ -258,6 +272,8 @@ class GameManager extends Thread {
 		con2.sendEnemyName( m_game.getName(1) );
 		con1.sendNextTable( m_game.getNext() );
 		con2.sendNextTable( m_game.getNext() );
+		con1.sendOjamaTable( m_game.getOjamaTable() );
+		con2.sendOjamaTable( m_game.getOjamaTable() );
 	}
 
 	public void run(){
@@ -265,8 +281,27 @@ class GameManager extends Thread {
 			while(true){
 				if( m_game.getReady(1) && m_game.getReady(2) ){
 					m_game.next();
-					m_p1.sendStartTurn();
-					m_p2.sendStartTurn();
+					switch( m_game.getStatus() ){
+					case 0: // 試合中
+						m_p1.sendStartTurn();
+						m_p2.sendStartTurn();
+						break;
+					case 1: // 1P勝利
+						m_p1.sendFinishInfo(1);
+						m_p2.sendFinishInfo(2);
+						System.out.println("1P勝利");
+						break;
+					case 2: // 2P勝利
+						m_p1.sendFinishInfo(2);
+						m_p2.sendFinishInfo(1);
+						System.out.println("2P勝利");
+						break;
+					case 3: // 引き分け
+						m_p1.sendFinishInfo(3);
+						m_p2.sendFinishInfo(3);
+						System.out.println("DRAW");
+						break;
+					}
 				}
 				Thread.sleep(100);
 			}
